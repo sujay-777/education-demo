@@ -48,6 +48,7 @@ const CreateCourse = () => {
         category: 'Programming',
         level: 'Beginner',
         language: 'English',
+        isFree: true,
         price: '',
         currency: 'INR',
         thumbnail: null,
@@ -533,50 +534,87 @@ const CreateCourse = () => {
                                     <div className="space-y-6">
                                         <h3 className="text-xl font-bold text-gray-900">Pricing</h3>
 
+                                        {/* Free/Paid Toggle */}
                                         <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
-                                            <select
-                                                name="currency"
-                                                value={formData.currency}
-                                                onChange={handleInputChange}
-                                                className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none bg-white"
-                                            >
-                                                <option value="INR">INR (₹)</option>
-                                                <option value="USD">USD ($)</option>
-                                            </select>
+                                            <label className="block text-sm font-bold text-gray-700 mb-3">Course Type</label>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, isFree: true, price: 0 }))}
+                                                    className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all ${formData.isFree
+                                                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
+                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    Free Course
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, isFree: false }))}
+                                                    className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all ${!formData.isFree
+                                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    Paid Course
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">Course Price</label>
-                                            <div className="relative">
-                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-gray-500">₹</span>
-                                                <input
-                                                    name="price"
-                                                    value={formData.price}
-                                                    onChange={handleInputChange}
-                                                    type="number"
-                                                    placeholder="0.00"
-                                                    className="w-full pl-10 pr-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-lg"
-                                                />
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-2">Leave blank for free courses.</p>
-                                        </div>
+                                        {!formData.isFree && (
+                                            <>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Currency</label>
+                                                    <select
+                                                        name="currency"
+                                                        value={formData.currency}
+                                                        onChange={handleInputChange}
+                                                        className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none bg-white"
+                                                    >
+                                                        <option value="INR">INR (₹)</option>
+                                                        <option value="USD">USD ($)</option>
+                                                    </select>
+                                                </div>
 
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">Teacher UPI ID (for receiving payments)</label>
-                                            <div className="relative">
-                                                <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-gray-400 w-5 h-5" />
-                                                <input
-                                                    name="upiId"
-                                                    value={formData.upiId}
-                                                    onChange={handleInputChange}
-                                                    type="text"
-                                                    placeholder="yourname@upi"
-                                                    className="w-full pl-12 pr-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-lg"
-                                                />
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Course Price</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-gray-500">{formData.currency === 'INR' ? '₹' : '$'}</span>
+                                                        <input
+                                                            name="price"
+                                                            value={formData.price}
+                                                            onChange={handleInputChange}
+                                                            type="number"
+                                                            placeholder="0.00"
+                                                            className="w-full pl-10 pr-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-lg"
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Teacher UPI ID (for receiving payments)</label>
+                                                    <div className="relative">
+                                                        <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-gray-400 w-5 h-5" />
+                                                        <input
+                                                            name="upiId"
+                                                            value={formData.upiId}
+                                                            onChange={handleInputChange}
+                                                            type="text"
+                                                            placeholder="yourname@upi"
+                                                            className="w-full pl-12 pr-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-lg"
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 mt-2">Students will use this to pay for your course.</p>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {formData.isFree && (
+                                            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                                                <p className="text-sm text-emerald-700 font-medium">✨ This course will be available to all students for free!</p>
                                             </div>
-                                            <p className="text-xs text-gray-400 mt-2">Students will use this to pay for your course.</p>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

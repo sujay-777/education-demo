@@ -397,7 +397,11 @@ const CourseDetail = () => {
                             <div className="bg-white p-8 rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 text-center lg:text-left">
                                 <div className="mb-6">
                                     <span className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                                        {course.price ? `${course.currency || 'INR'} ${course.price}` : 'Free'}
+                                        {course.isFree ? (
+                                            <span className="text-emerald-600">Free</span>
+                                        ) : (
+                                            `${course.currency || 'INR'} ${course.price}`
+                                        )}
                                     </span>
                                 </div>
 

@@ -185,7 +185,11 @@ const Courses = () => {
 
                                             <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                                                 <span className="text-xl font-extrabold text-gray-900">
-                                                    {course.price ? `${course.currency || 'INR'} ${course.price}` : 'Free'}
+                                                    {course.isFree ? (
+                                                        <span className="text-emerald-600">Free</span>
+                                                    ) : (
+                                                        `${course.currency || 'INR'} ${course.price}`
+                                                    )}
                                                 </span>
                                                 <span className="text-indigo-600 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
                                                     Enroll <ChevronRight className="w-4 h-4 ml-1" />

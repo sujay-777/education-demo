@@ -85,7 +85,9 @@ const CourseDetail = () => {
             const response = await axios.post(`${API_URL}/courses/${id}/enroll`);
             if (response.status === 200 || response.status === 201) {
                 setIsEnrolled(true);
-                alert('Successfully enrolled!');
+                alert('🎉 Successfully enrolled! You can now access all course videos.');
+                // Refresh the page to show unlocked content
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } catch (error) {
             console.error('Enrollment error:', error);
@@ -94,6 +96,30 @@ const CourseDetail = () => {
         } finally {
             setIsEnrolling(false);
         }
+    };
+
+    const handleVideoClick = async (e, lec, isEnrolled) => {
+        if (!isEnrolled) {
+            e.preventDefault();
+            alert('Please enroll in this course to access the videos.');
+            return;
+        }
+
+        // For Cloudflare Stream videos (UIDs), fetch playback URL
+        if (lec.video && !lec.video.startsWith('http')) {
+            e.preventDefault();
+            try {
+                // Show loading state if needed
+                const response = await axios.get(`${API_URL}/courses/${id}/video/${lec.video}`);
+                const { iframeUrl } = response.data;
+                // Open video in new window with Cloudflare Stream player
+                window.open(iframeUrl, '_blank', 'width=1280,height=720');
+            } catch (error) {
+                console.error('Error fetching video:', error);
+                alert('Failed to load video. Please try again.');
+            }
+        }
+        // If it's a direct URL (shouldn't happen with new uploads but for legacy/external), let default behavior handle it
     };
 
     const toggleSection = (index) => {
@@ -321,21 +347,24 @@ const CourseDetail = () => {
                                                     >
                                                         <div className="divide-y divide-gray-100 border-t border-gray-100">
                                                             {section.lectures?.map((lec, lIdx) => (
-                                                                <div key={lIdx} className="px-6 py-4 flex items-center justify-between hover:bg-indigo-50/30 transition-colors cursor-pointer group">
-                                                                    <div className="flex items-center gap-3">
+                                                                <div key={lIdx} className="px-6 py-4 flex items-center justify-between hover:bg-indigo-50/30 transition-colors group">
+                                                                    <div className="flex items-center gap-3 flex-1">
                                                                         {isEnrolled ? (
-                                                                            <Play className="h-4 w-4 text-indigo-500 fill-current" />
+                                                                            <Play className="h-4 w-4 text-indigo-500 fill-current flex-shrink-0" />
                                                                         ) : (
-                                                                            <Lock className="h-4 w-4 text-gray-400" />
+                                                                            <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                                                         )}
-                                                                        <a
-                                                                            href={isEnrolled ? (lec.video?.startsWith('http') ? lec.video : `${API_URL.replace('/api', '')}${lec.video}`) : '#'}
-                                                                            target={isEnrolled ? "_blank" : "_self"}
-                                                                            rel="noopener noreferrer"
-                                                                            className="text-gray-700 font-medium group-hover:text-indigo-600 transition-colors"
+                                                                        <button
+                                                                            onClick={(e) => handleVideoClick(e, lec, isEnrolled)}
+                                                                            className={`text-gray-700 font-medium group-hover:text-indigo-600 transition-colors flex-1 text-left ${isEnrolled ? 'cursor-pointer hover:underline' : 'cursor-not-allowed opacity-60'
+                                                                                }`}
+                                                                            disabled={!isEnrolled}
                                                                         >
                                                                             {lec.title}
-                                                                        </a>
+                                                                            {isEnrolled && (
+                                                                                <span className="ml-2 text-xs text-emerald-600 font-bold">▶ Watch Now</span>
+                                                                            )}
+                                                                        </button>
                                                                     </div>
                                                                     <span className="text-sm text-gray-400">{lec.duration || 'Video'}</span>
                                                                 </div>
@@ -408,9 +437,21 @@ const CourseDetail = () => {
                                 <button
                                     onClick={handleEnroll}
                                     disabled={isEnrolling || isEnrolled}
-                                    className={`w-full py-4 ${isEnrolled ? 'bg-emerald-500' : 'bg-indigo-600'} text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg transform hover:-translate-y-1 mb-4`}
+                                    className={`w-full py-4 ${isEnrolled ? 'bg-emerald-500' : 'bg-indigo-600'} text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg transform hover:-translate-y-1 mb-4 disabled:opacity-70 disabled:cursor-not-allowed`}
                                 >
-                                    {isEnrolling ? 'Enrolling...' : isEnrolled ? 'Go to Course' : 'Enroll Now'}
+                                    {isEnrolling ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Enrolling...
+                                        </span>
+                                    ) : isEnrolled ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <CheckCircle className="w-5 h-5" />
+                                            Enrolled - Access Videos Below
+                                        </span>
+                                    ) : (
+                                        `Enroll Now${course.isFree ? ' - Free' : ''}`
+                                    )}
                                 </button>
 
                                 <p className="text-xs text-center text-gray-400 mb-8 font-medium">30-Day Money-Back Guarantee • Full Lifetime Access</p>

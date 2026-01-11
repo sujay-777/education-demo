@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema({
   // Teacher specific fields
   bio: String,
   expertise: [String],
+  upiId: {
+    type: String,
+    trim: true
+  },
   earnings: {
     type: Number,
     default: 0

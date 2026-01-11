@@ -44,66 +44,55 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
     const [searchQuery, setSearchQuery] = useState('');
+    const [enrolledCourses, setEnrolledCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleCourseClick = (courseId) => {
-        navigate(`/courses/${courseId}`);
+    React.useEffect(() => {
+        const fetchEnrolledCourses = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('http://localhost:5000/api/courses/enrolled', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    navigate('/login');
+                    return;
+                }
+
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setEnrolledCourses(data);
+                }
+            } catch (error) {
+                console.error('Error fetching enrolled courses:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchEnrolledCourses();
+    }, []);
+
+    const handleCourseClick = (id) => {
+        navigate(`/courses/${id}`);
     };
 
-    // Mock Data for Charts
-    const activityData = [
-        { name: 'Mon', hours: 2 },
-        { name: 'Tue', hours: 4.5 },
-        { name: 'Wed', hours: 3 },
-        { name: 'Thu', hours: 6 },
-        { name: 'Fri', hours: 4 },
-        { name: 'Sat', hours: 8 },
-        { name: 'Sun', hours: 5 },
-    ];
-
-    const progressData = [
-        { name: 'Completed', value: 25, fill: '#8b5cf6' },
-        { name: 'In Progress', value: 45, fill: '#6366f1' },
-        { name: 'Not Started', value: 30, fill: '#e5e7eb' }
-    ];
-
-    const skillsData = [
-        { subject: 'React', A: 120, fullMark: 150 },
-        { subject: 'Node.js', A: 98, fullMark: 150 },
-        { subject: 'Design', A: 86, fullMark: 150 },
-        { subject: 'DevOps', A: 99, fullMark: 150 },
-        { subject: 'Testing', A: 85, fullMark: 150 },
-        { subject: 'SQL', A: 65, fullMark: 150 },
-    ];
-
     const stats = [
-        { label: 'Enrolled Courses', value: '12', icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100' },
-        { label: 'Hours Learned', value: '45', icon: Clock, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-        { label: 'Certificates', value: '3', icon: Award, color: 'text-amber-600', bg: 'bg-amber-100' },
-        { label: 'Avg. Score', value: '94%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+        { label: 'Enrolled Courses', value: enrolledCourses.length.toString(), icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100' },
+        { label: 'Hours Learned', value: '0', icon: Clock, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+        { label: 'Certificates', value: '0', icon: Award, color: 'text-amber-600', bg: 'bg-amber-100' },
+        { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-100' },
     ];
 
-    const allCourses = [
-        { id: 1, title: 'Advanced React Patterns', instructor: 'Sarah Wilson', progress: 75, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', category: 'Frontend' },
-        { id: 2, title: 'Node.js Microservices', instructor: 'Mike Chen', progress: 30, image: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&q=80', category: 'Backend' },
-        { id: 3, title: 'UI/UX Design Masterclass', instructor: 'Emma Davis', progress: 10, image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80', category: 'Design' },
-        { id: 4, title: 'Docker for Beginners', instructor: 'Alex Johnson', progress: 0, image: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80', category: 'DevOps' },
-        { id: 5, title: 'Kubernetes Deep Dive', instructor: 'Alex Johnson', progress: 0, image: 'https://images.unsplash.com/photo-1667372393119-c85c020d4818?w=800&q=80', category: 'DevOps' },
-        { id: 6, title: 'Complete Python Bootcamp', instructor: 'Jose Portilla', progress: 50, image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=800&q=80', category: 'Backend' },
-        { id: 7, title: 'Vue.js 3 Fundamentals', instructor: 'Ben Hong', progress: 0, image: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&q=80', category: 'Frontend' },
-        { id: 8, title: 'Machine Learning A-Z', instructor: 'Kirill Eremenko', progress: 20, image: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=800&q=80', category: 'AI/ML' },
-        { id: 9, title: 'CSS Grid & Flexbox', instructor: 'Jen Simmons', progress: 90, image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&q=80', category: 'Frontend' },
-        { id: 10, title: 'AWS Solutions Architect', instructor: 'Stephane Maarek', progress: 5, image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80', category: 'Cloud' },
-        { id: 11, title: 'Figma for Developers', instructor: 'Gary Simon', progress: 15, image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=800&q=80', category: 'Design' },
-        { id: 12, title: 'GraphQL with Apollo', instructor: 'Eve Porcello', progress: 0, image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80', category: 'Backend' }
-    ];
 
     const displayedCourses = useMemo(() => {
-        if (!searchQuery) return activeTab === 'overview' ? allCourses.slice(0, 3) : allCourses;
-        return allCourses.filter(course =>
+        if (!searchQuery) return activeTab === 'overview' ? enrolledCourses.slice(0, 3) : enrolledCourses;
+        return enrolledCourses.filter(course =>
             course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+            (course.instructor && course.instructor.username && course.instructor.username.toLowerCase().includes(searchQuery.toLowerCase()))
         );
-    }, [searchQuery, activeTab]);
+    }, [searchQuery, activeTab, enrolledCourses]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -151,11 +140,22 @@ const Dashboard = () => {
                     </button>
 
                     <button
+                        onClick={() => { setActiveTab('my-courses'); setSearchQuery(''); }}
+                        className={`w-full flex items-center p-3 rounded-2xl transition-all duration-300 group ${activeTab === 'my-courses'
+                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                    >
+                        <BookOpen className={`w-5 h-5 ${activeTab === 'my-courses' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        <span className="hidden lg:block ml-3 font-medium text-sm">My Courses</span>
+                    </button>
+
+                    <button
                         onClick={() => navigate('/courses')}
                         className="w-full flex items-center p-3 rounded-2xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300 group"
                     >
-                        <BookOpen className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-                        <span className="hidden lg:block ml-3 font-medium text-sm">My Courses</span>
+                        <Search className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                        <span className="hidden lg:block ml-3 font-medium text-sm">Browse Courses</span>
                     </button>
 
                     <button
@@ -279,7 +279,7 @@ const Dashboard = () => {
                                                     className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 flex items-center gap-4 group cursor-pointer"
                                                 >
                                                     <div className="w-24 h-24 rounded-xl overflow-hidden relative flex-shrink-0">
-                                                        <img src={course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                        <img src={course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80'} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                                                             <PlayCircle className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                                         </div>
@@ -289,7 +289,7 @@ const Dashboard = () => {
                                                             <span className="text-[10px] font-bold tracking-wider text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">{course.category}</span>
                                                         </div>
                                                         <h4 className="font-bold text-gray-900 truncate mb-1">{course.title}</h4>
-                                                        <p className="text-sm text-gray-500 mb-3">{course.instructor}</p>
+                                                        <p className="text-sm text-gray-500 mb-3">{course.instructor?.username || 'Unknown Instructor'}</p>
 
                                                         <div className="flex items-center gap-3">
                                                             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -349,7 +349,7 @@ const Dashboard = () => {
                                             className="bg-white rounded-3xl p-3 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group cursor-pointer"
                                         >
                                             <div className="h-40 rounded-2xl overflow-hidden relative mb-4">
-                                                <img src={course.image} alt={course.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                <img src={course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80'} alt={course.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                                 <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold text-gray-800 shadow-sm">
                                                     {course.category}
                                                 </div>
@@ -362,7 +362,7 @@ const Dashboard = () => {
 
                                             <div className="px-2 pb-2">
                                                 <h3 className="font-bold text-gray-900 mb-1 truncate text-lg">{course.title}</h3>
-                                                <p className="text-sm text-gray-500 mb-4">{course.instructor}</p>
+                                                <p className="text-sm text-gray-500 mb-4">{course.instructor?.username || 'Unknown Instructor'}</p>
 
                                                 <div className="flex items-center justify-between mb-2">
                                                     <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{course.progress}% Completed</span>

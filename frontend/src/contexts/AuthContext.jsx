@@ -85,8 +85,11 @@ export const AuthProvider = ({ children }) => {
             const res = await axios.get(`${API_URL}/auth/profile`);
             setUser(res.data);
         } catch (err) {
-            localStorage.removeItem('accessToken');
-            setUser(null);
+            // Silently handle expired or invalid tokens on app load/refresh
+            if (err.response?.status === 401) {
+                localStorage.removeItem('accessToken');
+                setUser(null);
+            }
         } finally {
             setLoading(false);
         }

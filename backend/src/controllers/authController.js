@@ -152,10 +152,45 @@ const getProfile = async (req, res) => {
             email: user.email,
             role: user.role,
             profilePicture: user.profilePicture,
-            // Add other fields as needed
+            upiId: user.upiId,
+            bio: user.bio,
+            expertise: user.expertise
         });
     } else {
         res.status(404).json({ message: 'User not found' });
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.username = req.body.username || user.username;
+            user.email = req.body.email || user.email;
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+            user.upiId = req.body.upiId || user.upiId;
+            user.bio = req.body.bio || user.bio;
+            user.expertise = req.body.expertise || user.expertise;
+
+            const updatedUser = await user.save();
+
+            res.json({
+                _id: updatedUser._id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                profilePicture: updatedUser.profilePicture,
+                upiId: updatedUser.upiId,
+                accessToken: generateAccessToken(updatedUser)
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -164,5 +199,6 @@ module.exports = {
     login,
     logout,
     refresh,
-    getProfile
+    getProfile,
+    updateProfile
 };

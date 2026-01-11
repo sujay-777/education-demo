@@ -21,17 +21,37 @@ const CreateCourse = () => {
     const [activeStep, setActiveStep] = useState(1);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Pre-fill UPI ID from profile
+    React.useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('http://localhost:5000/api/auth/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.upiId) {
+                    setFormData(prev => ({ ...prev, upiId: data.upiId }));
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+            }
+        };
+        fetchProfile();
+    }, []);
+
     // Form State
     const [formData, setFormData] = useState({
         title: '',
         subtitle: '',
         description: '',
-        category: '',
+        category: 'Programming',
         level: 'Beginner',
         language: 'English',
         price: '',
         currency: 'INR',
         thumbnail: null,
+        upiId: '',
         sections: [
             {
                 id: 1,
@@ -40,7 +60,10 @@ const CreateCourse = () => {
                     { id: 1, title: 'Introduction to the Course', video: '' }
                 ]
             }
-        ]
+        ],
+        learningObjectives: [''],
+        requirements: [''],
+        targetAudience: ['']
     });
 
     const steps = [
@@ -105,10 +128,69 @@ const CreateCourse = () => {
         }));
     };
 
+    const handleListChange = (e, index, field) => {
+        const { value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [field]: prev[field].map((item, i) => i === index ? value : item)
+        }));
+    };
+
+    const addListItem = (field) => {
+        setFormData(prev => ({ ...prev, [field]: [...prev[field], ''] }));
+    };
+
+    const removeListItem = (index, field) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: prev[field].filter((_, i) => i !== index)
+        }));
+    };
+
+    const handleFileUpload = async (e, sectionId, lectureId, type = 'video') => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const uploadFormData = new FormData();
+        uploadFormData.append(type, file);
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch('http://localhost:5000/api/courses/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: uploadFormData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                if (type === 'video') {
+                    updateLecture(sectionId, lectureId, 'video', data.videoUrl);
+                } else if (type === 'thumbnail') {
+                    setFormData(prev => ({ ...prev, thumbnail: data.thumbnailUrl }));
+                }
+            } else {
+                alert(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            alert('Error uploading file');
+        }
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
             const token = localStorage.getItem('accessToken');
+            if (!formData.category) {
+                alert('Please select a category');
+                setIsSaving(false);
+                return;
+            }
+
+            console.log('Publishing course with data:', formData);
             const response = await fetch('http://localhost:5000/api/courses', {
                 method: 'POST',
                 headers: {
@@ -237,10 +319,14 @@ const CreateCourse = () => {
                                                 onChange={handleInputChange}
                                                 className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all bg-white"
                                             >
-                                                <option>Programming</option>
-                                                <option>Design</option>
-                                                <option>Business</option>
-                                                <option>Marketing</option>
+                                                <option value="Programming">Programming</option>
+                                                <option value="Design">Design</option>
+                                                <option value="Business">Business</option>
+                                                <option value="Marketing">Marketing</option>
+                                                <option value="Data Science">Data Science</option>
+                                                <option value="DevOps">DevOps</option>
+                                                <option value="Cloud">Cloud</option>
+                                                <option value="Other">Other</option>
                                             </select>
                                         </div>
                                         <div>
@@ -265,10 +351,79 @@ const CreateCourse = () => {
                                             name="description"
                                             value={formData.description}
                                             onChange={handleInputChange}
-                                            rows="6"
+                                            rows="4"
                                             placeholder="Tell students what they will learn..."
                                             className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none"
                                         ></textarea>
+                                    </div>
+
+                                    {/* Learning Objectives */}
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-bold text-gray-700">What will students learn in this course?</label>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {formData.learningObjectives.map((obj, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <input
+                                                        value={obj}
+                                                        onChange={(e) => handleListChange(e, idx, 'learningObjectives')}
+                                                        placeholder="e.g. Build real-world React apps"
+                                                        className="flex-grow px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"
+                                                    />
+                                                    <button onClick={() => removeListItem(idx, 'learningObjectives')} className="p-2 text-gray-400 hover:text-red-500">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={() => addListItem('learningObjectives')} className="text-sm font-bold text-indigo-600 flex items-center gap-1 hover:text-indigo-700">
+                                            <Plus className="w-4 h-4" /> Add objective
+                                        </button>
+                                    </div>
+
+                                    {/* Requirements */}
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-bold text-gray-700">Are there any course requirements or prerequisites?</label>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {formData.requirements.map((req, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <input
+                                                        value={req}
+                                                        onChange={(e) => handleListChange(e, idx, 'requirements')}
+                                                        placeholder="e.g. Basic JavaScript knowledge"
+                                                        className="flex-grow px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"
+                                                    />
+                                                    <button onClick={() => removeListItem(idx, 'requirements')} className="p-2 text-gray-400 hover:text-red-500">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={() => addListItem('requirements')} className="text-sm font-bold text-indigo-600 flex items-center gap-1 hover:text-indigo-700">
+                                            <Plus className="w-4 h-4" /> Add requirement
+                                        </button>
+                                    </div>
+
+                                    {/* Target Audience */}
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-bold text-gray-700">Who is this course for?</label>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {formData.targetAudience.map((audience, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <input
+                                                        value={audience}
+                                                        onChange={(e) => handleListChange(e, idx, 'targetAudience')}
+                                                        placeholder="e.g. Aspiring web developers"
+                                                        className="flex-grow px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"
+                                                    />
+                                                    <button onClick={() => removeListItem(idx, 'targetAudience')} className="p-2 text-gray-400 hover:text-red-500">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={() => addListItem('targetAudience')} className="text-sm font-bold text-indigo-600 flex items-center gap-1 hover:text-indigo-700">
+                                            <Plus className="w-4 h-4" /> Add target audience
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -304,10 +459,16 @@ const CreateCourse = () => {
                                                         placeholder="Lecture Title"
                                                         className="flex-grow outline-none text-gray-700 font-medium"
                                                     />
-                                                    <button className="flex items-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">
+                                                    <label className="flex items-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer">
                                                         <Video className="w-3 h-3" />
                                                         {lecture.video ? 'Change Video' : 'Add Content'}
-                                                    </button>
+                                                        <input
+                                                            type="file"
+                                                            accept="video/*"
+                                                            className="hidden"
+                                                            onChange={(e) => handleFileUpload(e, section.id, lecture.id, 'video')}
+                                                        />
+                                                    </label>
                                                 </div>
                                             ))}
                                             <button
@@ -336,13 +497,29 @@ const CreateCourse = () => {
                                     <div className="space-y-6">
                                         <h3 className="text-xl font-bold text-gray-900">Course Media</h3>
 
-                                        <div className="aspect-video rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:border-indigo-500 hover:bg-indigo-50/10 transition-all cursor-pointer group">
-                                            <div className="w-16 h-16 rounded-full bg-white mb-4 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                                                <ImageIcon className="w-8 h-8 text-indigo-500" />
-                                            </div>
-                                            <p className="font-bold text-gray-700">Upload Course Thumbnail</p>
-                                            <p className="text-xs mt-2">1280x720 (High Quality)</p>
-                                        </div>
+                                        <label className="aspect-video rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:border-indigo-500 hover:bg-indigo-50/10 transition-all cursor-pointer group relative overflow-hidden">
+                                            {formData.thumbnail ? (
+                                                <img
+                                                    src={formData.thumbnail.startsWith('http') ? formData.thumbnail : `http://localhost:5000${formData.thumbnail}`}
+                                                    alt="Thumbnail"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <div className="w-16 h-16 rounded-full bg-white mb-4 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                                        <ImageIcon className="w-8 h-8 text-indigo-500" />
+                                                    </div>
+                                                    <p className="font-bold text-gray-700">Upload Course Thumbnail</p>
+                                                    <p className="text-xs mt-2">1280x720 (High Quality)</p>
+                                                </>
+                                            )}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e, null, null, 'thumbnail')}
+                                            />
+                                        </label>
 
                                         <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
                                             <h4 className="font-bold text-indigo-900 text-sm mb-1">Promotional Video</h4>
@@ -383,6 +560,22 @@ const CreateCourse = () => {
                                                 />
                                             </div>
                                             <p className="text-xs text-gray-400 mt-2">Leave blank for free courses.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Teacher UPI ID (for receiving payments)</label>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-gray-400 w-5 h-5" />
+                                                <input
+                                                    name="upiId"
+                                                    value={formData.upiId}
+                                                    onChange={handleInputChange}
+                                                    type="text"
+                                                    placeholder="yourname@upi"
+                                                    className="w-full pl-12 pr-5 py-4 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-lg"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-2">Students will use this to pay for your course.</p>
                                         </div>
                                     </div>
                                 </div>

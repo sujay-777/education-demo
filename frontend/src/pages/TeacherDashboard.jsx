@@ -56,36 +56,71 @@ const enrollmentData = [
 
 const TeacherDashboard = () => {
 
-    const { logout } = useAuth();
+    const { logout, user: authUser } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState({
+        username: '',
+        email: '',
+        bio: '',
+        upiId: '',
+        role: ''
+    });
 
-    // Fetch Teacher's Courses
+    // Fetch Teacher's Data & Profile
     React.useEffect(() => {
-        const fetchCourses = async () => {
+        const fetchData = async () => {
             try {
                 const token = localStorage.getItem('accessToken');
-                const response = await fetch('http://localhost:5000/api/courses/my/courses', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+
+                // Fetch Courses
+                const coursesRes = await fetch('http://localhost:5000/api/courses/my-courses', {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const data = await response.json();
-                if (Array.isArray(data)) {
-                    setCourses(data);
-                }
+                const coursesData = await coursesRes.json();
+                if (Array.isArray(coursesData)) setCourses(coursesData);
+
+                // Fetch Profile
+                const profileRes = await fetch('http://localhost:5000/api/auth/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const profileData = await profileRes.json();
+                if (profileData) setProfile(profileData);
+
             } catch (error) {
-                console.error('Error fetching courses:', error);
+                console.error('Error fetching dashboard data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchCourses();
+        fetchData();
     }, []);
+
+    const handleProfileUpdate = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch('http://localhost:5000/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(profile)
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert('Profile updated successfully!');
+            } else {
+                alert(data.message || 'Update failed');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+        }
+    };
 
     // Calculate Stats from Real Data
     const totalStudents = courses.reduce((acc, course) => acc + (course.students ? course.students.length : 0), 0);
@@ -208,10 +243,10 @@ const TeacherDashboard = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {courses.slice(0, 4).map((course) => (
-                                <tr key={course.id} className="hover:bg-gray-50/50 transition-colors">
+                                <tr key={course._id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <img src={course.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                                            <img src={course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80'} alt="" className="w-10 h-10 rounded-lg object-cover" />
                                             <span className="font-semibold text-gray-900">{course.title}</span>
                                         </div>
                                     </td>
@@ -220,11 +255,11 @@ const TeacherDashboard = () => {
                                             {course.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 font-medium">{course.students}</td>
-                                    <td className="px-6 py-4 font-medium">{course.revenue}</td>
+                                    <td className="px-6 py-4 font-medium">{course.students ? course.students.length : 0}</td>
+                                    <td className="px-6 py-4 font-medium">₹{(course.price || 0) * (course.students ? course.students.length : 0)}</td>
                                     <td className="px-6 py-4 flex items-center gap-1">
                                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                        {course.rating}
+                                        {course.rating || '0.0'}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <button className="text-gray-400 hover:text-indigo-600"><MoreVertical className="w-5 h-5" /></button>
@@ -264,11 +299,11 @@ const TeacherDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {courses.map(course => (
-                    <div key={course.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                    <div key={course._id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 group">
                         <div className="relative h-48 overflow-hidden">
-                            <img src={course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={course.thumbnail ? (course.thumbnail.startsWith('http') ? course.thumbnail : `http://localhost:5000${course.thumbnail}`) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80'} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-bold text-gray-900">
-                                {course.students} Students
+                                {course.students ? course.students.length : 0} Students
                             </div>
                         </div>
                         <div className="p-6">
@@ -277,12 +312,12 @@ const TeacherDashboard = () => {
                                     {course.status}
                                 </span>
                                 <div className="flex items-center text-yellow-500 text-xs font-bold">
-                                    <Star className="w-4 h-4 mr-1 fill-current" /> {course.rating}
+                                    <Star className="w-4 h-4 mr-1 fill-current" /> {course.rating || '0.0'}
                                 </div>
                             </div>
                             <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{course.title}</h3>
                             <div className="flex items-center justify-between mt-6">
-                                <span className="font-bold text-lg text-indigo-600">{course.revenue}</span>
+                                <span className="font-bold text-lg text-indigo-600">₹{(course.price || 0) * (course.students ? course.students.length : 0)}</span>
                                 <button className="text-gray-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-50">
                                     <Settings className="w-5 h-5" />
                                 </button>
@@ -390,26 +425,38 @@ const TeacherDashboard = () => {
                 </h3>
                 <div className="space-y-6">
                     <div className="flex items-center gap-6 mb-8">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="Profile" className="w-24 h-24 rounded-full border-4 border-gray-100" />
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username || 'default'}`} alt="Profile" className="w-24 h-24 rounded-full border-4 border-gray-100" />
                         <button className="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-100 transition">Change Photo</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">First Name</label>
-                            <input type="text" defaultValue="John" className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none" />
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Display Name</label>
+                            <input
+                                type="text"
+                                value={profile.username}
+                                onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
+                                className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"
+                            />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Last Name</label>
-                            <input type="text" defaultValue="Doe" className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none" />
+                            <label className="block text-sm font-bold text-gray-700 mb-2">UPI ID (for payments)</label>
+                            <input
+                                type="text"
+                                value={profile.upiId || ''}
+                                onChange={(e) => setProfile(prev => ({ ...prev, upiId: e.target.value }))}
+                                placeholder="yourname@upi"
+                                className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 font-bold text-indigo-600 outline-none"
+                            />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">Bio</label>
-                        <textarea rows="4" defaultValue="Senior Instructor at EduPro. Passionate about web development." className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"></textarea>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Professional Title</label>
-                        <input type="text" defaultValue="Senior Instructor" className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none" />
+                        <textarea
+                            rows="4"
+                            value={profile.bio || ''}
+                            onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                            className="w-full px-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none"
+                        ></textarea>
                     </div>
                 </div>
             </div>
@@ -423,18 +470,25 @@ const TeacherDashboard = () => {
                         <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
                         <div className="relative">
                             <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                            <input type="email" defaultValue="john.doe@edupro.com" className="w-full pl-12 pr-5 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none" />
+                            <input
+                                type="email"
+                                value={profile.email}
+                                readOnly
+                                className="w-full pl-12 pr-5 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none"
+                            />
                         </div>
-                    </div>
-                    <div className="pt-4">
-                        <button className="px-6 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition">Update Password</button>
                     </div>
                 </div>
             </div>
 
             <div className="flex justify-end gap-4">
                 <button className="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
-                <button className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">Save Changes</button>
+                <button
+                    onClick={handleProfileUpdate}
+                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"
+                >
+                    Save Changes
+                </button>
             </div>
         </div>
     );
@@ -508,10 +562,10 @@ const TeacherDashboard = () => {
                         </button>
                         <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
                             <div className="text-right hidden md:block">
-                                <p className="text-sm font-bold text-gray-900">John Doe</p>
-                                <p className="text-xs text-gray-500">Senior Instructor</p>
+                                <p className="text-sm font-bold text-gray-900">{profile.username || 'Instructor'}</p>
+                                <p className="text-xs text-gray-500">{profile.role === 'teacher' ? 'Instructor' : profile.role}</p>
                             </div>
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="Profile" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username || 'default'}`} alt="Profile" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
                         </div>
                     </div>
                 </header>

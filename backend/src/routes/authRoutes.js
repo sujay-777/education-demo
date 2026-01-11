@@ -6,7 +6,8 @@ const {
     login,
     logout,
     refresh,
-    getProfile
+    getProfile,
+    updateProfile
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
@@ -15,6 +16,7 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/refresh', refresh);
 router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
 
 // Google OAuth
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

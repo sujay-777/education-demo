@@ -71,6 +71,9 @@ const courseSchema = new mongoose.Schema({
         required: true
     },
     sections: [sectionSchema],
+    learningObjectives: [String],
+    requirements: [String],
+    targetAudience: [String],
     students: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

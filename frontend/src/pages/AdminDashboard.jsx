@@ -50,12 +50,20 @@ const AdminDashboard = () => {
 
     const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-    // Mock Data for Overview (keep for now until we have stats API)
+    // State for dashboard stats
+    const [dashboardStats, setDashboardStats] = useState({
+        studentsCount: 0,
+        teachersCount: 0,
+        coursesCount: 0,
+        revenue: 0
+    });
+
+    // Derived stats for UI
     const stats = [
-        { id: 1, label: 'Total Users', value: students.length + teachers.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { id: 2, label: 'Active Courses', value: '1,245', icon: BookOpen, color: 'text-purple-600', bg: 'bg-purple-50' },
-        { id: 3, label: 'Total Revenue', value: '$84,320', icon: Shield, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { id: 4, label: 'Pending Approvals', value: '45', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50' },
+        { id: 1, label: 'Total Users', value: dashboardStats.studentsCount + dashboardStats.teachersCount, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { id: 2, label: 'Active Courses', value: dashboardStats.coursesCount, icon: BookOpen, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { id: 3, label: 'Total Revenue', value: `$${dashboardStats.revenue.toLocaleString()}`, icon: Shield, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { id: 4, label: 'Pending Approvals', value: '0', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50' },
     ];
 
     const revenueData = [
@@ -74,10 +82,32 @@ const AdminDashboard = () => {
         { name: 'Admins', value: 3, color: '#06b6d4' },
     ];
 
+    const [courses, setCourses] = useState([]);
+
     useEffect(() => {
         fetchStudents();
         fetchTeachers();
+        fetchDashboardStats();
+        fetchCourses();
     }, []);
+
+    const fetchDashboardStats = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/admin/stats`);
+            setDashboardStats(res.data);
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
+
+    const fetchCourses = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/admin/courses`);
+            setCourses(res.data);
+        } catch (error) {
+            console.error('Error fetching courses:', error);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
@@ -111,12 +141,7 @@ const AdminDashboard = () => {
         }
     };
 
-    // Hardcoded for now as backend doesn't serve courses completely yet
-    const coursesList = [
-        { id: 1, title: 'Complete Web Development', instructor: 'Bob Smith', status: 'Published', sales: 450 },
-        { id: 2, title: 'Advanced Python', instructor: 'Emma Davis', status: 'Pending', sales: 0 },
-        { id: 3, title: 'Digital Marketing', instructor: 'John Doe', status: 'Flagged', sales: 120 },
-    ];
+
 
     const menuItems = [
         { id: 'overview', label: 'Overview', icon: Layout },
@@ -299,30 +324,42 @@ const AdminDashboard = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {coursesList.map((course) => (
-                            <tr key={course.id} className="hover:bg-gray-50/50 transition-colors">
+                        {courses.map((course) => (
+                            <tr key={course._id} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-gray-900">{course.title}</td>
-                                <td className="px-6 py-4">{course.instructor}</td>
                                 <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded-md text-xs font-bold ${course.status === 'Published' ? 'bg-green-100 text-green-700' :
-                                        course.status === 'Flagged' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-gray-700">{course.instructor?.username || 'Unknown'}</span>
+                                        <span className="text-xs text-gray-500">{course.instructor?.email}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded-md text-xs font-bold ${course.status === 'Published' || course.status === 'Active' ? 'bg-green-100 text-green-700' :
+                                            course.status === 'Draft' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                         {course.status}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 font-medium">{course.sales}</td>
+                                <td className="px-6 py-4 font-medium">
+                                    {course.students?.length || 0}
+                                </td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    {course.status === 'Pending' && (
-                                        <button className="p-2 hover:bg-green-50 text-green-600 rounded-lg" title="Approve">
-                                            <CheckCircle className="w-4 h-4" />
-                                        </button>
-                                    )}
+                                    <button className="p-2 hover:bg-green-50 text-green-600 rounded-lg" title="View Details">
+                                        <BookOpen className="w-4 h-4" />
+                                    </button>
                                     <button className="p-2 hover:bg-red-50 text-red-500 rounded-lg" title="Delete">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </td>
                             </tr>
                         ))}
+                        {courses.length === 0 && (
+                            <tr>
+                                <td colSpan="5" className="text-center py-8 text-gray-400">
+                                    No courses found.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
